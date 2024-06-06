@@ -1,12 +1,9 @@
-
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urljoin
+import json
 
-frontier = ["https://www.hindustantimes.com/"]
-visited = {}
-max_urls = 1
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 }
@@ -30,7 +27,7 @@ def get_paragraphs(soup):
     paragraphs = []
     for p in soup.find_all('p'):
         paragraphs.append(p.text.strip())
-    return paragraphs
+    return "," . join(paragraphs)
 
 def get_images(soup, base_url):
     images = []
@@ -40,40 +37,70 @@ def get_images(soup, base_url):
         images.append(full_url)
     return images
 
-session = requests.Session()
-session.headers.update(headers)
+def main():
+    frontier = ["https://www.hindustantimes.com/"]
+    visited = {}
+    file_counter = 0
+    data_to_save = []
 
-while len(frontier) > 0 and len(visited) < max_urls:
-    url_to_visit = frontier.pop()
-    try:
-        response = session.get(url_to_visit)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Failed to fetch {url_to_visit}: {e}")
-        continue
+    while len(frontier) > 0:
+        url_to_visit = frontier.pop()
+        try:
+            response = requests.get(url_to_visit, headers=headers)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to fetch {url_to_visit}: {e}")
+            continue
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-    page_title = get_page_title(soup)
-    paragraphs = get_paragraphs(soup)
-    images = get_images(soup, url_to_visit)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            page_title = get_page_title(soup)
+            paragraphs = get_paragraphs(soup)
+            images = get_images(soup, url_to_visit)
 
-    print(f"Title: {page_title}")
-    print(f"Paragraphs: {paragraphs}")
-    print(f"Images: {images}")
-    candidate_links = parse_links(soup, url_to_visit)
-    for current in candidate_links:
-        if current not in visited and current not in frontier:
-            frontier.append(current)
+            print(f"Title: {page_title}")
+            print(f"Paragraphs: {paragraphs}")
+            print(f"Images: {images}")
 
-    unix_ts = int(datetime.now().timestamp())
-    file_to_save = f'hindustantimes_{unix_ts}.html'
-    with open(file_to_save, "w") as html_file:
-        html_file.write(response.text)
+            candidate_links = parse_links(soup, url_to_visit)
+            for current in candidate_links:
+                if current not in visited and current not in frontier:
+                    frontier.append(current)
 
-    visited[url_to_visit] = datetime.now().isoformat()
+            unix_ts = int(datetime.now().timestamp())
+            file_to_save = f'hindustantimes_{unix_ts}.html'
+            with open(file_to_save, "w") as html_file:
+                html_file.write(response.text)
 
-    print(f"Visited: {url_to_visit}")
+            visited[url_to_visit] = datetime.now().isoformat()
 
+            
+            data_to_save.append({
+                'url': url_to_visit,
+                'title': page_title,
+                'paragraphs': paragraphs,
+                'images': images,
+                'timestamp': visited[url_to_visit]
+            })
+
+            file_counter += 1
+    
+            if file_counter >= 100:
+                json_file_to_save = f'hindustantimes_data_{unix_ts}.json'
+                with open(json_file_to_save, "w") as json_file:
+                    json.dump(data_to_save, json_file, indent=4)
+                file_counter = 0
+                data_to_save = []
+            print(f"Visited: {url_to_visit}")
+
+    if data_to_save:
+        unix_ts = int(datetime.now().timestamp())
+        json_file_to_save = f'hindustantimes_data_{unix_ts}.json'
+        with open(json_file_to_save, "w") as json_file:
+            json.dump(data_to_save, json_file, indent=4)
 
 print("Crawling finished.")
 
+
+if __name__ == "__main__":
+    main()
