@@ -3,10 +3,14 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urljoin
 import time
+import json
 
 frontier = ["https://zeenews.india.com/"]
 visited = set()  
-max_urls = 1
+file_count = 0
+batch_size = 3
+all_data = []
+
 
 def parse_links(soup, base_url):
     links = []
@@ -20,21 +24,22 @@ def get_page_title(soup):
     title_tag = soup.find('title')
     if title_tag:
         return title_tag.text.strip()
-    return "No Title"
+    return "None"
 
 def get_paragraphs(soup):
     paragraphs = []
     for p in soup.find_all('p'):
         paragraphs.append(p.text.strip())
-    return paragraphs
+    return ",".join(paragraphs)
 
 def get_images(soup, base_url):
-    images = []
+    images = set()  # Use a set to store unique image URLs
     for img in soup.find_all('img', src=True):
         src = img['src']
         full_url = urljoin(base_url, src)
-        images.append(full_url)
-    return images
+        images.add(full_url)
+    return list(images)  # Convert set back to list for consistency
+
 
 def extract_data(soup):
     data = []
@@ -45,7 +50,7 @@ def extract_data(soup):
         data.append({"image": image, "title": title})
     return data
 
-while len(frontier) > 0 and len(visited) < max_urls:
+while len(frontier) > 0:
     url_to_visit = frontier.pop(0)  
     if url_to_visit in visited:
         continue
@@ -96,8 +101,33 @@ while len(frontier) > 0 and len(visited) < max_urls:
     visited.add(url_to_visit)
     print(f"LINK: {url_to_visit}")
 
+        # Collect data for JSON
+all_data.append(
+            {
+                "url": url_to_visit,
+                "timestamp": datetime.now().isoformat(),
+                "title": page_title,
+                "p_tags": concatenated_p_tags,
+            }
+        )
+
+file_count += 1
+
+        # Save JSON after every 100 files
+if file_count % batch_size == 0:
+    json_file_to_save = f"liveMint_data_batch_{file_count // batch_size}.json"
+    with open(json_file_to_save, "w") as json_file:
+        json.dump(all_data, json_file, indent=4)
+    all_data.clear()  # Clear the data for the next batch
+
+# # Save any remaining data
+# if all_data:
+#     json_file_to_save = f"liveMint_data_batch_{(file_count // batch_size) + 1}.json"
+#     with open(json_file_to_save, "w") as json_file:
+#         json.dump(all_data, json_file, indent=4)
+
+
 
 print("Scraping completed.")
-
 
 
