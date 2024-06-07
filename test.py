@@ -12,7 +12,7 @@ def fetch_article_details(article_url):
         h1_tag = article_soup.find('h1', class_='arttitle')
         h2_tag = article_soup.find('h2', class_='artdec')
         img_tag = article_soup.find('img', class_='lazy')
-        
+        dictionary["URL"] = article_url
         if h1_tag:
             dictionary["Title"] = h1_tag.text.strip()
             if h2_tag: 
@@ -31,6 +31,7 @@ def fetch_article_details(article_url):
                     print("No images found")
     else:
         print(f'Failed to retrieve the article. Status code: {article_response.status_code}')
+        print("Article URL:", article_url)
     list.append(dictionary)
     
 
@@ -51,6 +52,7 @@ def scrape_and_fetch(link):
             print('Failed to find the div with class="row lhsBox sport_tnews mb20".')
     else:
         print(f'Failed to retrieve the webpage. Status code: {response.status_code}')
+        print("scrape_and_fetch", link)
 
 
 def scrape_and_fetch2(link):
@@ -70,6 +72,7 @@ def scrape_and_fetch2(link):
             print('Failed to find the div with class="row lhsBox s_two_column pt20".')
     else:
         print(f'Failed to retrieve the webpage. Status code: {response.status_code}')
+        print("scrape_and_fetch2", link)
 
 
 def scrape_and_fetch3(link):
@@ -93,6 +96,7 @@ def scrape_and_fetch3(link):
             scrape_and_fetch3(next_page_url)
     else:
         print(f'Failed to retrieve the webpage. Status code: {response.status_code}')
+        print("scrape_and_fetch3", link)
 
 def scrape_and_fetch4(link):
     response = requests.get(link)
@@ -122,6 +126,7 @@ def scrape_and_fetch4(link):
                     fetch_article_details(article_url)            
     else:
         print(f'Failed to retrieve the webpage. Status code: {response.status_code}')
+        print("scrape_and_fetch4", link)
 
 def main():
     url = 'https://www.indiatvnews.com/'
@@ -149,6 +154,7 @@ def main():
             scrape_and_fetch2(link)
             scrape_and_fetch3(link)
             # scrape_and_fetch4(link)
+        print(len(list))
         for index in tqdm(other_indices_to_use, desc="Processing Links"):
             link = links[index]
             scrape_and_fetch4(link)
@@ -156,7 +162,7 @@ def main():
             scrape_and_fetch3(link)
         
         print(len(list))
-        with open("data.json", "w") as json_file:
+        with open("data2.json", "w") as json_file:
         # Write the list to the JSON file
             json.dump(list, json_file, indent=4)
     else:
