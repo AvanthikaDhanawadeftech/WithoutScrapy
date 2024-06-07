@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.parse import urljoin
 import json
+import os
 
 
 def parse_links(soup, base_url):
@@ -25,6 +26,16 @@ def get_page_title(soup):
 def get_p_tags(soup):
     p_tags = soup.find_all("p")
     return [tag.text.strip() for tag in p_tags]
+
+
+def get_image_urls(soup, base_url):
+    img_urls = set()
+    for img in soup.find_all("img", src=True):
+        src = img["src"]
+        full_url = urljoin(base_url, src)
+        if full_url.startswith("http"):
+            img_urls.add(full_url)
+    return list(img_urls)
 
 
 def main():
@@ -58,6 +69,9 @@ def main():
             concatenated_p_tags = ",".join(p_tags)
             print(f"Paragraph Tags: {concatenated_p_tags}")
 
+            image_urls = get_image_urls(soup, url_to_visit)
+            print(f"Image URLs: {image_urls}")
+
             unix_ts = int(datetime.now().timestamp())
             file_to_save = f"liveMint_{unix_ts}.html"
             with open(file_to_save, "w") as html_file:
@@ -67,6 +81,7 @@ def main():
                 "timestamp": datetime.now().isoformat(),
                 "title": page_title,
                 "p_tags": p_tags,
+                "image_urls": image_urls,
             }
 
             all_data.append(
@@ -75,6 +90,7 @@ def main():
                     "timestamp": datetime.now().isoformat(),
                     "title": page_title,
                     "p_tags": concatenated_p_tags,
+                    "image_urls": image_urls,
                 }
             )
 
